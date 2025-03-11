@@ -357,6 +357,18 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Set the weights on chain via our subtensor connection.
 
+        bt.logging.info("starting to set weights...")
+        uid = self.subtensor.get_uid_for_hotkey_on_subnet(
+            self.wallet.hotkey.ss58_address, self.config.netuid
+        )
+        block_weights_limit = self.subtensor.blocks_since_last_update(
+            self.config.netuid, uid
+        )
+        bt.logging.info(f"block weights limit: {block_weights_limit}")
+        weights_rate_limit = self.subtensor.weights_rate_limit(self.config.netuid)
+        bt.logging.info(f"weights rate limit: {weights_rate_limit}")
+        bt.logging.info(f"bslu > wrl {block_weights_limit > weights_rate_limit}")
+
         result, msg = self.subtensor.set_weights(
             wallet=self.wallet,
             netuid=self.config.netuid,
@@ -366,6 +378,7 @@ class BaseValidatorNeuron(BaseNeuron):
             wait_for_inclusion=False,
             version_key=self.spec_version,
         )
+
         bt.logging.info(f"result: {result}")
         bt.logging.info(f"msg: {msg}")
         if result is True:
