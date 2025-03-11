@@ -78,12 +78,6 @@ def add_args(cls, parser):
     # Netuid Arg: The netuid of the subnet to connect to.
     parser.add_argument("--netuid", type=int, help="Subnet netuid", default=1)
 
-    parser.add_argument(
-        "--subtensor.chain_endpoint",
-        type=str,
-        help="Subtensor endpoint to target",
-        default="",
-    )
     neuron_type = "validator" if "miner" not in cls.__name__.lower() else "miner"
 
     parser.add_argument(
@@ -280,6 +274,8 @@ def config(cls):
     bt.axon.add_args(parser)
     cls.add_args(parser)
     args = parser.parse_args()
+
+    print(f"got args: {args}")
 
     # Conditional logging based on the argument
     logging_level = args.log_level
