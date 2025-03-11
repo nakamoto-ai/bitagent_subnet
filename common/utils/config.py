@@ -21,6 +21,7 @@ import argparse
 import subprocess
 import bittensor as bt
 
+
 def is_cuda_available():
     try:
         output = subprocess.check_output(["nvidia-smi", "-L"], stderr=subprocess.STDOUT)
@@ -35,6 +36,7 @@ def is_cuda_available():
     except Exception:
         pass
     return "cpu"
+
 
 def check_config(cls, config: "bt.Config"):
     r"""Checks/validates the config namespace object."""
@@ -54,7 +56,7 @@ def check_config(cls, config: "bt.Config"):
     if not os.path.exists(config.neuron.full_path):
         os.makedirs(config.neuron.full_path, exist_ok=True)
 
-    #if not config.neuron.dont_save_events:
+    # if not config.neuron.dont_save_events:
     #    # Add custom event logger for the events.
     #    logger.level("EVENTS", no=38, icon="📝")
     #    logger.add(
@@ -75,15 +77,20 @@ def add_args(cls, parser):
     """
     # Netuid Arg: The netuid of the subnet to connect to.
     parser.add_argument("--netuid", type=int, help="Subnet netuid", default=1)
-    neuron_type = (
-        "validator" if "miner" not in cls.__name__.lower() else "miner"
+
+    parser.add_argument(
+        "--subtensor.chain_endpoint",
+        type=str,
+        help="Subtensor endpoint to target",
+        default="",
     )
+    neuron_type = "validator" if "miner" not in cls.__name__.lower() else "miner"
 
     parser.add_argument(
         "--openai-api-key",
         type=str,
         default="EMPTY",
-        help="the OpenAI API key defaults to EMPTY"
+        help="the OpenAI API key defaults to EMPTY",
     )
     parser.add_argument(
         "--openai-api-base",
@@ -132,17 +139,16 @@ def add_args(cls, parser):
         help="If set, we dont save events to a log file.",
         default=False,
     )
-    
+
     parser.add_argument(
         "--log_level",
         type=str,
         choices=["trace", "debug", "info"],  # Add more levels if needed
         help="Logging level to use",
-        default="info"
+        default="info",
     )
-     
-    if neuron_type == "validator":
 
+    if neuron_type == "validator":
         parser.add_argument(
             "--validator-hf-cache-dir",
             type=str,
@@ -152,7 +158,7 @@ def add_args(cls, parser):
         parser.add_argument(
             "--validator-hf-server-port",
             type=int,
-            default=8028, 
+            default=8028,
             help="the port of the docker container to run the offline HF model check",
         )
         parser.add_argument(
@@ -180,7 +186,7 @@ def add_args(cls, parser):
             "--neuron.sample_size",
             type=int,
             help="The number of miners to query in a single step.",
-            default=10
+            default=10,
         )
 
         parser.add_argument(
@@ -231,7 +237,7 @@ def add_args(cls, parser):
             "--blacklist.force_validator_permit",
             action="store_true",
             help="If set, we will force incoming requests to have a permit.",
-            default=(args.netuid==20),
+            default=(args.netuid == 20),
         )
 
         parser.add_argument(
@@ -245,22 +251,23 @@ def add_args(cls, parser):
             "--hf-model-name-to-run",
             type=str,
             default="Salesforce/xLAM-7b-r",
-            help="the OpenAI model name defaults to Salesforce/xLAM-7b-r"
+            help="the OpenAI model name defaults to Salesforce/xLAM-7b-r",
         )
 
         parser.add_argument(
             "--miner",
             type=str,
             default="default",
-            help="Miner to load. Default choices are 'default' and 'mock'.  Pass your custom miner name as appropriate."
+            help="Miner to load. Default choices are 'default' and 'mock'.  Pass your custom miner name as appropriate.",
         )
 
         parser.add_argument(
             "--miner-hf-model-name-to-submit",
             type=str,
             default="Salesforce/xLAM-7b-r",
-            help="the HF model name that you've uploaded to the HF hub to be evaluated, will be returned when validator asks for your model to evaluate."
+            help="the HF model name that you've uploaded to the HF hub to be evaluated, will be returned when validator asks for your model to evaluate.",
         )
+
 
 def config(cls):
     """
