@@ -275,8 +275,6 @@ def config(cls):
     cls.add_args(parser)
     args = parser.parse_args()
 
-    print(f"got args: {args}")
-
     # Conditional logging based on the argument
     logging_level = args.log_level
     if logging_level == "trace":

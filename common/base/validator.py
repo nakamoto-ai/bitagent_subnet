@@ -57,7 +57,7 @@ class BaseValidatorNeuron(BaseNeuron):
         bt.logging.info("Building validation weights.")
 
         self.scores = np.zeros(self.metagraph.n, dtype=np.float32)
-        self.offline_scores = {}        
+        self.offline_scores = {}
         self.offline_miners_scored = {}
         self.offline_model_names = {}
         self.running_offline_mode = False
@@ -70,6 +70,9 @@ class BaseValidatorNeuron(BaseNeuron):
         # set random seed to be encoded regrade version based later
         np.random.seed(572343)
         bt.logging.info(f"Startup regrade_version: {self.regrade_version}")
+
+        # just setting this so the attribute exists when we try to access it
+        self.hotkeys = []
 
         # Init sync with the network. Updates the metagraph.
         if os.path.exists(self.config.neuron.full_path + f"/{self.state_file_name}"):
@@ -128,7 +131,7 @@ class BaseValidatorNeuron(BaseNeuron):
     def tool_dataset_regen(self):
 
         mod_date = dataset_info("BitAgent/tool_shuffle_small").last_modified.strftime("%Y%m%d")
-        
+
         if mod_date != self.regrade_version:
             bt.logging.info(f"Dataset Regeneration: Regrade version{self.regrade_version} has changed, updating to {mod_date}")
             self.tool_dataset = ToolDataset()
@@ -138,7 +141,7 @@ class BaseValidatorNeuron(BaseNeuron):
         else:
             bt.logging.info(f"Dataset Regeneration: {self.regrade_version} is the same as check_date: {mod_date}, passing.")
             return
-        
+
     def _thread_entrypoint(self):
         """This is the function that the background thread will run.
            It sets up an event loop and runs the async 'run' method."""
@@ -186,7 +189,7 @@ class BaseValidatorNeuron(BaseNeuron):
 
                 if self.step % 200 == 0:
                     self.tool_dataset_regen()
-                    
+
 
                 # Run multiple forwards concurrently.
                 await self.concurrent_forward()
@@ -199,7 +202,7 @@ class BaseValidatorNeuron(BaseNeuron):
                     self.sync()
                 except Exception as e:
                     bt.logging.error(f"Error syncing metagraph during run loop: {e}")
-                
+
                 bt.logging.info(f"Validator still running... step: {self.step}, no new offline scoring activity")
                 await asyncio.sleep(30)
                 self.step += 1
@@ -272,7 +275,7 @@ class BaseValidatorNeuron(BaseNeuron):
         """
         Sets the validator weights to the metagraph hotkeys based on the scores it has received from the miners. The weights determine the trust and incentive level the validator assigns to miner nodes on the network.
         """
-        
+
         if self.config.subtensor.network == "test":
             return # Don't set weights on testnet.
         # with temporary_logging_state(state):
@@ -286,11 +289,11 @@ class BaseValidatorNeuron(BaseNeuron):
             bt.logging.warning(
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
-        # correct validator scores to be 0 
+        # correct validator scores to be 0
         for uid, hotkey in enumerate(self.hotkeys):
-            if not check_uid_availability(self.metagraph, uid, self.config.neuron.vpermit_tao_limit): 
+            if not check_uid_availability(self.metagraph, uid, self.config.neuron.vpermit_tao_limit):
                 # if validator, set validators scores to 0
-                self.scores[uid] = 0 
+                self.scores[uid] = 0
                 #self.offline_scores[self.previous_competition_version][uid] = 0
                 self.offline_scores[self.competition_version][uid] = 0
                 self.offline_miners_scored[self.competition_version][self.regrade_version].append(uid)
@@ -362,7 +365,7 @@ class BaseValidatorNeuron(BaseNeuron):
                 bt.logging.debug("Metagraph hotkeys are the same, skipping resync")
                 return
 
-            bt.logging.info("Metagraph updated, resyncing hotkeys, dendrite pool and moving averages")  
+            bt.logging.info("Metagraph updated, resyncing hotkeys, dendrite pool and moving averages")
             # Normalize all hotkeys that have been replaced, and zero out all hotkeys that are no longer available
             for uid, hotkey in enumerate(self.hotkeys):
                 if hotkey != self.metagraph.hotkeys[uid]:
@@ -446,7 +449,7 @@ class BaseValidatorNeuron(BaseNeuron):
             alpha: float = self.config.neuron.moving_average_alpha
         self.scores: np.ndarray = alpha * scattered_rewards + ( 1 - alpha) * self.scores
         bt.logging.debug(f"Updated moving avg ONLINE scores: {self.scores}")
-    
+
     def save_state(self):
         """Saves the state of the validator to a file."""
         bt.logging.debug(f"Saving validator state - {self.state_file_name}.")
@@ -466,7 +469,7 @@ class BaseValidatorNeuron(BaseNeuron):
             )
         except Exception as e:
             bt.logging.error(f"OFFLINE: Error saving validator state: {e}")
-        
+
     def load_state(self):
         """Loads the state of the validator from a file."""
         bt.logging.info("Loading validator state.")
