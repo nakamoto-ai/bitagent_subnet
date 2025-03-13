@@ -6,8 +6,9 @@ import random
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import argparse
-import time 
+import time
 import boto3
+import torch
 
 
 parser = argparse.ArgumentParser(description='Generate and evaluate tool call tasks')
@@ -111,9 +112,22 @@ while True:
                     print(f"input:\n{input}")
 
                     inputs = tokenizer.apply_chat_template(input, return_tensors="pt").to(model.device)
+                    attention_mask = torch.ones_like(inputs).to(model.device)
 
-                    outputs = model.generate(inputs, max_new_tokens=512, do_sample=False, num_return_sequences=1, eos_token_id=tokenizer.eos_token_id)
-                    output = tokenizer.decode(outputs[0][len(inputs[0]):], skip_special_tokens=True)
+                    with torch.inference_mode():
+                        outputs = model.generate(
+                            inputs,
+                            max_new_tokens=512,
+                            do_sample=False,
+                            num_return_sequences=1,
+                            eos_token_id=tokenizer.eos_token_id,
+                            pad_token_id=tokenizer.eos_token_id,
+                            attention_mask=attention_mask
+                        )
+                        output = tokenizer.decode(
+                            outputs[0][len(inputs[0]):],
+                            skip_special_tokens=True
+                        )
                     syn.response = output
                     print(f"response:\n{output}")
 
@@ -171,6 +185,6 @@ while True:
 
     print(f"Tasks and rewards data written to {output_path}")
 
-    # upload file to s3 
+    # upload file to s3
     bucket = "sn20"
     upload_file_to_s3(output_path, bucket, f"generated/{output_base_name}/{output_filename}")
