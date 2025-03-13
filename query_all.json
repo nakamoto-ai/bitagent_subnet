@@ -1,0 +1,27 @@
+{
+    "apps": [
+	{
+		"name": "bitagent_data_gen",
+		"script": "query_gen.py",
+		"args": ["--model", "BitAgent/BitAgent-8B", "--output", "bitagent"],
+		"instances": "1",
+		"wait_ready": true,
+		"autorestart": false,
+		"max_restarts": 5,
+		"interpreter" : ".venv/bin/python"
+	},
+	{
+		"name": "llama_8b_instruct_reasoning",
+		"script": "query_gen.py",
+		"args": ["--model", "maus/Llama-3.1-8B-Instruct-Reasoning", "--output", "llama_instruct_reasoning"],
+		"instances": "1",
+		"wait_ready": true,
+		"autorestart": false,
+		"max_restarts": 5,
+		"interpreter" : ".venv/bin/python"
+    	}
+
+
+    ]
+}
+
