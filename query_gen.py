@@ -11,12 +11,10 @@ import argparse
 parser = argparse.ArgumentParser(description='Generate and evaluate tool call tasks')
 parser.add_argument('--model', type=str, default="BitAgent/BitAgent-8B",
                     help='The model name or path to use for generation')
-parser.add_argument('--output', type=str, default="bitagent_output",
-                    help='Base name for output files (will be appended with _N.json)')
 args = parser.parse_args()
 
 response_gen_model = args.model
-output_base_name = args.output
+output_base_name = response_gen_model.split("/")[-1].lower()
 
 print(f"Using model: {response_gen_model}")
 print(f"Output files will be named: {output_base_name}_N.json")
@@ -28,10 +26,10 @@ system_prompt ="""
 You are an expert in composing functions.
 You are given a user query and a set of possible functions.
 Based on the query, you will need to make one or more function/tool calls to achieve the purpose.
-The query may not be in the form of a question. 
+The query may not be in the form of a question.
 
 ONLY return a function call.
-If none of the tools work, STILL RETURN A FUNCTION CALL. 
+If none of the tools work, STILL RETURN A FUNCTION CALL.
 you MUST put it in the format of [func_name(params_name1=params_value1, params_name2=params_value2...)].
 You SHOULD NOT include any other text in the response.
 
@@ -86,13 +84,13 @@ for i in range(5):
 
                     user_query = tool_call_task.messages[0].content
                     tools = tool_call_task.synapse.tools
-                    
+
                     input = [
                         {"role": "system", "content": system_prompt.format(tools=tools)},
                         {"role": "user", "content": user_query}
                     ]
                     print(f"input:\n{input}")
-                    
+
                     inputs = tokenizer.apply_chat_template(input, return_tensors="pt").to(model.device)
 
                     outputs = model.generate(inputs, max_new_tokens=512, do_sample=False, num_return_sequences=1, eos_token_id=tokenizer.eos_token_id)
