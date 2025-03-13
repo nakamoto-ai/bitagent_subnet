@@ -9,6 +9,7 @@ import argparse
 import time
 import boto3
 import torch
+import os
 
 
 parser = argparse.ArgumentParser(description='Generate and evaluate tool call tasks')
@@ -71,7 +72,6 @@ syn = QueryTask()
 s3_client = boto3.client('s3')
 def upload_file_to_s3(file_path, bucket_name, object_name=None):
     try:
-        # If object_name not specified, use file name
         if object_name is None:
             object_name = file_path.split('/')[-1]
 
@@ -92,7 +92,7 @@ while True:
     task_rewards = []
     tasks_and_rewards = []
 
-    batch_size = 1000
+    batch_size = 5
     for i in range(batch_size):
         try:
             match choice:
@@ -181,9 +181,9 @@ while True:
 
         serializable_data.append(entry)
 
-    # Write to file
-    with open(output_path, 'w') as f:
-        json.dump(serializable_data, f, indent=2)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, 'w') as f:
+            json.dump(serializable_data, f, indent=2)
 
     print(f"Tasks and rewards data written to {output_path}")
 
