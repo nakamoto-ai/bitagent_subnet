@@ -6,6 +6,8 @@ import random
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import argparse
+import time 
+import boto3
 
 
 parser = argparse.ArgumentParser(description='Generate and evaluate tool call tasks')
@@ -65,13 +67,30 @@ class MockedValidator(Validator):
 val = MockedValidator()
 syn = QueryTask()
 
-tasks = []
-task_datas = []
-task_rewards = []
+s3_client = boto3.client('s3')
+def upload_file_to_s3(file_path, bucket_name, object_name=None):
+    try:
+        # If object_name not specified, use file name
+        if object_name is None:
+            object_name = file_path.split('/')[-1]
 
-tasks_and_rewards = []
+        # Upload the file
+        s3_client.upload_file(
+            Filename=file_path,
+            Bucket=bucket_name,
+            Key=object_name
+        )
+        print(f"Successfully uploaded {file_path} to {bucket_name}/{object_name}")
+    except Exception as e:
+        print(f"Error uploading file: {e}")
 
-for i in range(5):
+
+while True:
+    tasks = []
+    task_datas = []
+    task_rewards = []
+    tasks_and_rewards = []
+
     for _ in range(1000):
         try:
             match choice:
@@ -113,7 +132,9 @@ for i in range(5):
 
 
     # Write tasks_and_rewards to json file
-    output_file = f"output/{output_base_name}/{output_base_name}_{i}.json"
+    unix_timestamp = time.time()
+    output_filename = f"{output_base_name}_{unix_timestamp}.json"
+    output_path = f"output/{output_base_name}/{output_filename}"
     serializable_data = []
 
     for item in tasks_and_rewards:
@@ -145,7 +166,11 @@ for i in range(5):
         serializable_data.append(entry)
 
     # Write to file
-    with open(output_file, 'w') as f:
+    with open(output_path, 'w') as f:
         json.dump(serializable_data, f, indent=2)
 
-    print(f"Tasks and rewards data written to {output_file}")
+    print(f"Tasks and rewards data written to {output_path}")
+
+    # upload file to s3 
+    bucket = "sn20"
+    upload_file_to_s3(output_path, bucket, f"generated/{output_base_name}/{output_filename}")
