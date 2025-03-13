@@ -92,10 +92,12 @@ while True:
     task_rewards = []
     tasks_and_rewards = []
 
-    for _ in range(1000):
+    batch_size = 1000
+    for i in range(batch_size):
         try:
             match choice:
                 case "tool_call":
+                    print(f"Scoring task {i}/{batch_size}")
                     tool_call_task = ToolCallTask(validator=val, name="Responds with correct function call", offline=False)
                     task_data = tool_call_task.generate_task_data()
                     tasks.append(tool_call_task)
@@ -109,7 +111,7 @@ while True:
                         {"role": "system", "content": system_prompt.format(tools=tools)},
                         {"role": "user", "content": user_query}
                     ]
-                    print(f"input:\n{input}")
+                    #print(f"input:\n{input}")
 
                     inputs = tokenizer.apply_chat_template(input, return_tensors="pt").to(model.device)
                     attention_mask = torch.ones_like(inputs).to(model.device)
@@ -129,7 +131,7 @@ while True:
                             skip_special_tokens=True
                         )
                     syn.response = output
-                    print(f"response:\n{output}")
+                    #print(f"response:\n{output}")
 
                     # [total_score, total_possible, results, correct_answer]
                     task_reward = tool_call_task.reward(validator=val, synapse=syn)
