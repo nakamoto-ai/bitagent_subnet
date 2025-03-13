@@ -92,7 +92,7 @@ while True:
     task_rewards = []
     tasks_and_rewards = []
 
-    batch_size = 5
+    batch_size = 1000
     for i in range(batch_size):
         try:
             match choice:
