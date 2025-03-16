@@ -126,7 +126,7 @@ while True:
                     ]
                     for msg in tool_call_task.messages:
                         input.append({
-                            "role": msg.role,
+                            "role": msg.role.value,
                             "content": msg.content
                         })
 
