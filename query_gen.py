@@ -142,7 +142,7 @@ while True:
                     input = [
                         {
                             "role": "system",
-                            "content": system_prompt.format(tools=tools),
+                            "content": system_prompt.format(functions=tools),
                         },
                         {"role": "user", "content": user_query},
                     ]
