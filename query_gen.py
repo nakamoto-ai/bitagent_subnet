@@ -1,7 +1,13 @@
 from bitagent.tasks.tool_call_task import ToolCallTask
+from bitagent.schemas.chat import messages_to_list
 from bitagent.datasources import ToolDataset
 from neurons.validator import Validator
 from bitagent.protocol import QueryTask
+from bitagent.criteria import (
+    default_criteria,
+    tool_call_criteria,
+    irrelevant_tool_call_criteria,
+)
 import random
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -12,9 +18,13 @@ import torch
 import os
 
 
-parser = argparse.ArgumentParser(description='Generate and evaluate tool call tasks')
-parser.add_argument('--model', type=str, default="BitAgent/BitAgent-8B",
-                    help='The model name or path to use for generation')
+parser = argparse.ArgumentParser(description="Generate and evaluate tool call tasks")
+parser.add_argument(
+    "--model",
+    type=str,
+    default="BitAgent/BitAgent-8B",
+    help="The model name or path to use for generation",
+)
 args = parser.parse_args()
 
 response_gen_model = args.model
@@ -24,9 +34,11 @@ print(f"Using model: {response_gen_model}")
 print(f"Output files will be named: {output_base_name}_N.json")
 
 tokenizer = AutoTokenizer.from_pretrained(response_gen_model, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(response_gen_model, torch_dtype='auto', device_map='auto')
+model = AutoModelForCausalLM.from_pretrained(
+    response_gen_model, torch_dtype="auto", device_map="auto"
+)
 
-system_prompt ="""
+system_prompt = """
 You are an expert in composing functions.
 You are given a user query and a set of possible functions.
 Based on the query, you will need to make one or more function/tool calls to achieve the purpose.
@@ -58,6 +70,7 @@ task_names = list(TASK_FREQUENCY.keys())
 task_frequencies = list(TASK_FREQUENCY.values())
 choice = random.choices(task_names, weights=task_frequencies)[0]
 
+
 class MockedValidator(Validator):
     def __init__(self):
         pass
@@ -66,21 +79,20 @@ class MockedValidator(Validator):
     def validate(self, task):
         return True
 
+
 val = MockedValidator()
 syn = QueryTask()
 
-s3_client = boto3.client('s3')
+s3_client = boto3.client("s3")
+
+
 def upload_file_to_s3(file_path, bucket_name, object_name=None):
     try:
         if object_name is None:
-            object_name = file_path.split('/')[-1]
+            object_name = file_path.split("/")[-1]
 
         # Upload the file
-        s3_client.upload_file(
-            Filename=file_path,
-            Bucket=bucket_name,
-            Key=object_name
-        )
+        s3_client.upload_file(Filename=file_path, Bucket=bucket_name, Key=object_name)
         print(f"Successfully uploaded {file_path} to {bucket_name}/{object_name}")
     except Exception as e:
         print(f"Error uploading file: {e}")
@@ -98,22 +110,53 @@ while True:
             match choice:
                 case "tool_call":
                     print(f"Scoring task {i}/{batch_size}")
-                    tool_call_task = ToolCallTask(validator=val, name="Responds with correct function call", offline=False)
-                    task_data = tool_call_task.generate_task_data()
+                    tool_call_task = ToolCallTask(
+                        validator=val,
+                        name="Responds with correct function call",
+                        offline=False,
+                    )
                     tasks.append(tool_call_task)
-                    task_datas.append(task_data)
 
+                    messages, tools, data = tool_call_task.generate_task_data()
+                    expected_messages = messages_to_list(data.messages)
+                    expected_tool_call_messages = [
+                        em for em in expected_messages if em["role"] == "tool call"
+                    ]
+                    if messages[0].role == "system":
+                        # try again - skip tasks with system prompts
+                        continue
+                    if len(expected_tool_call_messages) > 0:
+                        expected_tool_call_message = expected_tool_call_messages[0][
+                            "content"
+                        ]
+                    else:
+                        # bt.logging.debug(f"Skipping - no tool call message found in expected messages: {expected_messages}")
+                        continue
 
-                    user_query = tool_call_task.messages[0].content
-                    tools = tool_call_task.synapse.tools
+                    if type(expected_tool_call_message) == str:
+                        expected_tool_call = json.loads(expected_tool_call_message)
+                    else:
+                        expected_tool_call = expected_tool_call_message
+                    tool_call_task.criteria = default_criteria + tool_call_criteria(
+                        expected_response=expected_tool_call
+                    )
+
+                    print(f"expected response: {expected_tool_call}")
+
+                    user_query = messages[0].content
 
                     input = [
-                        {"role": "system", "content": system_prompt.format(tools=tools)},
-                        {"role": "user", "content": user_query}
+                        {
+                            "role": "system",
+                            "content": system_prompt.format(tools=tools),
+                        },
+                        {"role": "user", "content": user_query},
                     ]
-                    #print(f"input:\n{input}")
+                    # print(f"input:\n{input}")
 
-                    inputs = tokenizer.apply_chat_template(input, return_tensors="pt").to(model.device)
+                    inputs = tokenizer.apply_chat_template(
+                        input, return_tensors="pt"
+                    ).to(model.device)
                     attention_mask = torch.ones_like(inputs).to(model.device)
 
                     with torch.inference_mode():
@@ -124,28 +167,32 @@ while True:
                             num_return_sequences=1,
                             eos_token_id=tokenizer.eos_token_id,
                             pad_token_id=tokenizer.eos_token_id,
-                            attention_mask=attention_mask
+                            attention_mask=attention_mask,
                         )
                         output = tokenizer.decode(
-                            outputs[0][len(inputs[0]):],
-                            skip_special_tokens=True
+                            outputs[0][len(inputs[0]) :], skip_special_tokens=True
                         )
                     syn.response = output
-                    #print(f"response:\n{output}")
+                    # print(f"response:\n{output}")
 
                     # [total_score, total_possible, results, correct_answer]
                     task_reward = tool_call_task.reward(validator=val, synapse=syn)
                     task_rewards.append(task_reward)
                     print(f"scored response: {task_reward[0]}/{task_reward[1]}")
-                    tasks_and_rewards.append({"task": tool_call_task, "response": syn.response, "reward": task_reward})
+                    tasks_and_rewards.append(
+                        {
+                            "task": tool_call_task,
+                            "response": syn.response,
+                            "expected_response": expected_tool_call,
+                            "reward": task_reward,
+                        }
+                    )
 
         except Exception as e:
-            #bt.logging.warning(f'Error getting task (name {choice}): ', e)
-            #bt.logging.warning(traceback.format_exc())
+            # bt.logging.warning(f'Error getting task (name {choice}): ', e)
+            # bt.logging.warning(traceback.format_exc())
             raise e
-            print(f'Error getting task (name {choice}): ', e)
-
-
+            print(f"Error getting task (name {choice}): ", e)
 
     # Write tasks_and_rewards to json file
     unix_timestamp = time.time()
@@ -166,27 +213,26 @@ while True:
         if hasattr(item["task"], "task_data"):
             task_dict["task_data"] = item["task"].task_data
 
-
         # Format reward data
         reward_data = {
-            "value": float(item["reward"]) if hasattr(item["reward"], "__float__") else item["reward"]
+            "value": float(item["reward"])
+            if hasattr(item["reward"], "__float__")
+            else item["reward"]
         }
 
         # Create serializable entry
-        entry = {
-            "task": task_dict,
-            "response": item["response"],
-            "reward": reward_data
-        }
+        entry = {"task": task_dict, "response": item["response"], "reward": reward_data}
 
         serializable_data.append(entry)
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(serializable_data, f, indent=2)
 
     print(f"Tasks and rewards data written to {output_path}")
 
     # upload file to s3
     bucket = "sn20"
-    upload_file_to_s3(output_path, bucket, f"generated/{output_base_name}/{output_filename}")
+    upload_file_to_s3(
+        output_path, bucket, f"generated/{output_base_name}/{output_filename}"
+    )
