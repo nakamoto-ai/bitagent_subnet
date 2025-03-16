@@ -112,30 +112,6 @@ while True:
                     tasks.append(tool_call_task)
 
                     messages, tools, data = tool_call_task.generate_task_data()
-                    expected_messages = messages_to_list(data.messages)
-                    expected_tool_call_messages = [
-                        em for em in expected_messages if em["role"] == "tool call"
-                    ]
-                    if messages[0].role == "system":
-                        # try again - skip tasks with system prompts
-                        continue
-                    if len(expected_tool_call_messages) > 0:
-                        expected_tool_call_message = expected_tool_call_messages[0][
-                            "content"
-                        ]
-                    else:
-                        # bt.logging.debug(f"Skipping - no tool call message found in expected messages: {expected_messages}")
-                        continue
-
-                    if type(expected_tool_call_message) == str:
-                        expected_tool_call = json.loads(expected_tool_call_message)
-                    else:
-                        expected_tool_call = expected_tool_call_message
-                    tool_call_task.criteria = default_criteria + tool_call_criteria(
-                        expected_response=expected_tool_call
-                    )
-
-                    print(f"expected response: {expected_tool_call}")
 
                     user_query = messages[0].content
 
@@ -146,7 +122,7 @@ while True:
                         },
                         {"role": "user", "content": user_query},
                     ]
-                    print(f"input:{input}")
+                    #print(f"input:{input}")
 
                     inputs = tokenizer.apply_chat_template(
                         input, return_tensors="pt"
@@ -167,6 +143,7 @@ while True:
                             outputs[0][len(inputs[0]) :], skip_special_tokens=True
                         )
                     syn.response = output
+
                     print(f"response: {output}")
 
                     total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
