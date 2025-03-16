@@ -53,7 +53,6 @@ class Criterion():
         try:
             # make sure the tool response converts nicely to an ast
             synapse.response = self.clean_response(synapse.response)
-            print(f"clean_response: {synapse.response}")
             try:
                 ast.parse(synapse.response)
             except:

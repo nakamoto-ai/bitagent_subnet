@@ -28,13 +28,13 @@ from bitagent.datasources.tools import ToolCallData
 from bitagent.helpers.tool_parsing import validate_tool_call, find_msgs_before_tool_call, find_first_tool_call
 from bitagent.criteria import default_criteria, tool_call_criteria, irrelevant_tool_call_criteria
 
-REWRITE_TOOL_USER_PROMPT = """You rewrite questions to make sense when paired with a function call. 
+REWRITE_TOOL_USER_PROMPT = """You rewrite questions to make sense when paired with a function call.
 The rewritten question will need to be changed to match the argument parameters and values relative to the function name.
-You should change the phrasing of the question to be different and keeping aligned with the function name and arguments. 
+You should change the phrasing of the question to be different and keeping aligned with the function name and arguments.
 The capitalization of your user prompt rephrasasl should match the exact case of what is expected in the function call.
 Your response should be the rewritten question only.\n
-Function call:\n`{tool_call}`\n 
-Question: {user}\n 
+Function call:\n`{tool_call}`\n
+Question: {user}\n
 Modified Question: """
 
 class ToolCallTask(Task):
@@ -72,6 +72,8 @@ class ToolCallTask(Task):
                     expected_tool_call = json.loads(expected_tool_call_message)
                 else:
                     expected_tool_call = expected_tool_call_message
+
+                print(f"expected_tool_call: {expected_tool_call}")
                 self.criteria = default_criteria + tool_call_criteria(expected_response=expected_tool_call)
 
                 break
@@ -100,7 +102,7 @@ class ToolCallTask(Task):
             # filter out the tools by name that are already in the data.tools
             new_tools = [t for t in next(self.validator.tool_dataset).tools if t.name not in [dt.name for dt in data.tools]]
             data.tools = data.tools + new_tools
-        
+
         # remove all the messages after the first tool call, keeping the assistant
         # this reduces the number of messages needing rewording
         messages = data.messages
@@ -142,18 +144,18 @@ class ToolCallTask(Task):
                     count = 11
                     continue
 
-                
+
                 data.messages[0].content = user
 
                 data = ToolCallData(messages=data.messages, tools=data.tools)
                 messages_before_call = find_msgs_before_tool_call(data.messages)
-                
+
             else:
                 # no tool call in the messages, so skip
                 raise Exception(f"Skipping - guess there was no tool call in the messages: {data.messages}")
-                
+
             all_tools = data.tools
             random.shuffle(all_tools)
             return messages_before_call, all_tools, data
-        
+
         raise Exception("Skipping - while loop ended without a tool call task")
