@@ -107,7 +107,7 @@ while True:
                     tool_call_task = ToolCallTask(
                         validator=val,
                         name="Responds with correct function call",
-                        offline=False,
+                        offline=True,
                     )
                     tasks.append(tool_call_task)
 
