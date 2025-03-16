@@ -51,6 +51,8 @@ class ToolCallTask(Task):
         self.name += " - Tool Call"
         self.weight = TASK_WEIGHTS["tool_call"]
 
+        self.expected_tool_call = None
+
         if offline:
             self.mode = "offline"
         messages = None
@@ -73,7 +75,7 @@ class ToolCallTask(Task):
                 else:
                     expected_tool_call = expected_tool_call_message
 
-                print(f"expected_tool_call: {expected_tool_call}")
+                self.expected_tool_call = expected_tool_call
                 self.criteria = default_criteria + tool_call_criteria(expected_response=expected_tool_call)
 
                 break

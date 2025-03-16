@@ -1,3 +1,4 @@
+from math import exp
 from bitagent.tasks.tool_call_task import ToolCallTask
 from bitagent.schemas.chat import messages_to_list
 from bitagent.datasources import ToolDataset
@@ -111,8 +112,8 @@ while True:
                     )
                     tasks.append(tool_call_task)
 
-                    print(f"Generated messages: {tool_call_task.messages}")
-                    print(f"Generated tools: {tool_call_task.synapse.tools}")
+                    #print(f"Generated messages: {tool_call_task.messages}")
+                    #print(f"Generated tools: {tool_call_task.synapse.tools}")
 
 
                     input = [
@@ -151,16 +152,19 @@ while True:
                     total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
                     print(f"total_score: {total_score}")
                     print(f"possible_score: {total_possible}")
-                    print(f"results: {results}")
-                    print(f"correct_answer: {correct_answer}")
+                    print("results:")
+                    for result in results:
+                        print(f"  {result}")
+                    print(f"Expected tool cool: {tool_call_task.expected_tool_call}")
+
                     tasks_and_rewards.append(
                         {
                             "task": tool_call_task,
                             "response": syn.response,
+                            "expected_tool_call": tool_call_task.expected_tool_call,
                             "total_score": total_score,
                             "total_possible": total_possible,
                             "results": results,
-                            "correct_answer": correct_answer
                         }
                     )
                     print("\n\n")
