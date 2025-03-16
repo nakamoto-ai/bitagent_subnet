@@ -157,7 +157,7 @@ while True:
                         "input": input,
                         "tools_json": json_formatted_tools,
                         "messages_json": json_formatted_messages,
-                        "response": syn.response,
+                        "response": output,
                         "expected_tool_call": tool_call_task.expected_tool_call,
                         "total_score": total_score,
                         "total_possible": total_possible,
