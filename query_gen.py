@@ -169,17 +169,19 @@ while True:
                     syn.response = output
                     print(f"response: {output}")
 
-                    # [total_score, total_possible, results, correct_answer]
-                    task_reward = tool_call_task.reward(validator=val, synapse=syn)
-                    task_rewards.append(task_reward)
-                    print(f"scored response: {task_reward[0]}/{task_reward[1]}")
-                    print(f"Score results: {task_reward[2]}")
+                    total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
+                    print(f"total_score: {total_score}")
+                    print(f"possible_score: {total_possible}")
+                    print(f"results: {results}")
+                    print(f"correct_answer: {correct_answer}")
                     tasks_and_rewards.append(
                         {
                             "task": tool_call_task,
                             "response": syn.response,
-                            "expected_response": expected_tool_call,
-                            "reward": task_reward,
+                            "total_score": total_score,
+                            "total_possible": total_possible,
+                            "results": results,
+                            "correct_answer": correct_answer
                         }
                     )
                     print("\n\n")

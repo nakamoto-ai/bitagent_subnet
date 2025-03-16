@@ -30,10 +30,10 @@ class Task():
     criteria: List[Criterion]
     synapse: QueryTask
 
-    def __init__(self, 
-                 name: str, 
+    def __init__(self,
+                 name: str,
                  weight: int = 0.05,
-                 desc: str = "", 
+                 desc: str = "",
                  timeout: int = 12,
                  tools: List[Tool] = [],
                  messages: List[ChatMessage] = [],
@@ -68,14 +68,14 @@ class Task():
 
     def __repr__(self):
         return pformat(vars(self), indent=4, width=1)
-    
+
     def toJSON(self):
         return {
             "weight": self.weight,
             "name": self.name,
             "mode": self.mode,
             "desc": self.desc,
-            "messages": messages_to_list(self.messages) if isinstance(self.messages, list) else [], 
+            "messages": messages_to_list(self.messages) if isinstance(self.messages, list) else [],
             "tools": [tool.to_dict() for tool in self.synapse.tools],
             "timeout": self.timeout,
         }
@@ -90,7 +90,7 @@ def get_random_task(validator, offline=False) -> Task:
     task_names = list(TASK_FREQUENCY.keys())
     task_frequencies = list(TASK_FREQUENCY.values())
     choice = random.choices(task_names, weights=task_frequencies)[0]
-    
+
     for _ in range(100):
         try:
             match choice:
