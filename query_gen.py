@@ -116,7 +116,7 @@ while True:
                     #print(f"Generated tools: {tool_call_task.synapse.tools}")
 
                     json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
-                    json_formatted_messages = [msg.__dict__ for msg in tool_call_task.messages]
+                    json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in tool_call_task.messages]
 
                     input = [
                         {
@@ -124,11 +124,7 @@ while True:
                             "content": system_prompt.format(functions=json_formatted_tools),
                         }
                     ]
-                    for msg in tool_call_task.messages:
-                        input.append({
-                            "role": msg.role.value,
-                            "content": msg.content
-                        })
+                    input.extend(json_formatted_messages)
 
                     print(f"Created input: {input}")
 
