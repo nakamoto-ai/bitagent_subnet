@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description="Generate and evaluate tool call ta
 parser.add_argument(
     "--model",
     type=str,
-    default="BitAgent/BitAgent-8B",
+    default="watt-ai/watt-tool-8B",
     help="The model name or path to use for generation",
 )
 args = parser.parse_args()
@@ -98,7 +98,7 @@ while True:
     task_rewards = []
     tasks_and_rewards = []
 
-    batch_size = 1000
+    batch_size = 500
     for i in range(batch_size):
         try:
             match choice:
@@ -181,36 +181,10 @@ while True:
     unix_timestamp = time.time()
     output_filename = f"{output_base_name}_{unix_timestamp}.json"
     output_path = f"output/{output_base_name}/{output_filename}"
-    serializable_data = []
 
-    for item in tasks_and_rewards:
-        # Convert task to serializable format
-        task_dict = {
-            "name": item["task"].name,
-            "type": item["task"].__class__.__name__,
-            "messages": [msg.to_dict() for msg in item["task"].messages],
-            "tools": [tool.to_dict() for tool in item["task"].synapse.tools],
-        }
-
-        # If task has additional attributes to save, add them here
-        if hasattr(item["task"], "task_data"):
-            task_dict["task_data"] = item["task"].task_data
-
-        # Format reward data
-        reward_data = {
-            "value": float(item["reward"])
-            if hasattr(item["reward"], "__float__")
-            else item["reward"]
-        }
-
-        # Create serializable entry
-        entry = {"task": task_dict, "response": item["response"], "reward": reward_data}
-
-        serializable_data.append(entry)
-
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, "w") as f:
-            json.dump(serializable_data, f, indent=2)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(tasks_and_rewards, f, indent=2)
 
     print(f"Tasks and rewards data written to {output_path}")
 
