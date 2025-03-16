@@ -116,6 +116,7 @@ while True:
                     #print(f"Generated tools: {tool_call_task.synapse.tools}")
 
                     json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
+                    json_formatted_messages = [msg.__dict__ for msg in tool_call_task.messages]
 
                     input = [
                         {
@@ -125,7 +126,7 @@ while True:
                     ]
                     for msg in tool_call_task.messages:
                         input.append({
-                            "role": "user",
+                            "role": msg.role,
                             "content": msg.content
                         })
 
@@ -154,23 +155,24 @@ while True:
                     print(f"response: {output}")
 
                     total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
-                    print(f"total_score: {total_score}")
-                    print(f"possible_score: {total_possible}")
-                    print("results:")
-                    for result in results:
-                        print(f"  {result}")
-                    print(f"Expected tool cool: {tool_call_task.expected_tool_call}")
 
-                    tasks_and_rewards.append(
-                        {
-                            "task": tool_call_task,
-                            "response": syn.response,
-                            "expected_tool_call": tool_call_task.expected_tool_call,
-                            "total_score": total_score,
-                            "total_possible": total_possible,
-                            "results": results,
-                        }
-                    )
+                    data_dict = {
+                        "input": input,
+                        "task": tool_call_task,
+                        "tools_json": json_formatted_tools,
+                        "messages_json": json_formatted_messages,
+                        "response": syn.response,
+                        "expected_tool_call": tool_call_task.expected_tool_call,
+                        "total_score": total_score,
+                        "total_possible": total_possible,
+                        "results": results,
+                    }
+
+                    print("Row contents:")
+                    for key, value in data_dict.items():
+                        print(f"  {key}: {value}")
+
+                    tasks_and_rewards.append(data_dict)
                     print("\n\n")
 
         except Exception as e:
