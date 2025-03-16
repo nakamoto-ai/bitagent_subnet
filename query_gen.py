@@ -146,7 +146,7 @@ while True:
                         },
                         {"role": "user", "content": user_query},
                     ]
-                    # print(f"input:\n{input}")
+                    print(f"input:{input}")
 
                     inputs = tokenizer.apply_chat_template(
                         input, return_tensors="pt"
@@ -173,6 +173,7 @@ while True:
                     task_reward = tool_call_task.reward(validator=val, synapse=syn)
                     task_rewards.append(task_reward)
                     print(f"scored response: {task_reward[0]}/{task_reward[1]}")
+                    print(f"Score results: {task_reward[2]}")
                     tasks_and_rewards.append(
                         {
                             "task": tool_call_task,
@@ -181,6 +182,7 @@ while True:
                             "reward": task_reward,
                         }
                     )
+                    print("\n\n")
 
         except Exception as e:
             # bt.logging.warning(f'Error getting task (name {choice}): ', e)
