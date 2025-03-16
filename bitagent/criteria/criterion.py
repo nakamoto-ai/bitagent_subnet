@@ -53,6 +53,7 @@ class Criterion():
         try:
             # make sure the tool response converts nicely to an ast
             synapse.response = self.clean_response(synapse.response)
+            print(f"clean_response: {synapse.response}")
             try:
                 ast.parse(synapse.response)
             except:
@@ -61,13 +62,14 @@ class Criterion():
                 feedback = bad_message(f"Your response: {synapse.response} was not parsable")
                 return reward, max_reward, feedback
 
-            # actually do the evaluation 
+            # actually do the evaluation
             reward, max_reward, feedback = self.eval_fx(task, validator, synapse, *self.eval_args)
         except Exception as e:
             #bt.logging.error(f"Exception was raised during criteria evaluation: {e}")
             reward = -0.5
             max_reward = 1.0
             feedback = bad_message(f"Exception while processing your response, please check format per protocol - {e}")
+            raise e
         feedback = f"[bold blue]{self.name}[/bold blue]\n" + feedback
         return reward, max_reward, feedback
 
@@ -90,6 +92,6 @@ def irrelevant_tool_call_criteria() -> List[Criterion]:
 
 # simple, defaults
 default_criteria = [
-    Criterion(name="Does not error", desc="", eval_fx=does_not_error), 
+    Criterion(name="Does not error", desc="", eval_fx=does_not_error),
     Criterion(name="Does not take a long time", desc="", eval_fx=does_not_take_a_long_time),
 ]
