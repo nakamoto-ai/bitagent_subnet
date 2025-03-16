@@ -111,20 +111,19 @@ while True:
                     )
                     tasks.append(tool_call_task)
 
-                    messages, tools, data = tool_call_task.generate_task_data()
-                    print(f"Generated messages: {messages}")
-                    print(f"Generated tools: {tools}")
-                    print(f"Generated data: {data}")
+                    print(f"Generated messages: {tool_call_task.messages}")
+                    print(f"Generated tools: {tool_call_task.synapse.tools}")
 
-                    user_query = messages[0].content
 
                     input = [
                         {
                             "role": "system",
-                            "content": system_prompt.format(functions=tools),
-                        },
-                        {"role": "user", "content": user_query},
+                            "content": system_prompt.format(functions=tool_call_task.synapse.tools),
+                        }
                     ]
+                    for msg in tool_call_task.messages:
+                        input.append(msg.__dict__)
+
                     print(f"Created input: {input}")
 
                     inputs = tokenizer.apply_chat_template(
