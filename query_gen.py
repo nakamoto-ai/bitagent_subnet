@@ -115,7 +115,7 @@ while True:
                     #print(f"Generated messages: {tool_call_task.messages}")
                     #print(f"Generated tools: {tool_call_task.synapse.tools}")
 
-                    json_formated_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
+                    json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
 
                     input = [
                         {
