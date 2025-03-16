@@ -158,7 +158,6 @@ while True:
 
                     data_dict = {
                         "input": input,
-                        "task": tool_call_task,
                         "tools_json": json_formatted_tools,
                         "messages_json": json_formatted_messages,
                         "response": syn.response,
@@ -170,7 +169,7 @@ while True:
 
                     print("Row contents:")
                     for key, value in data_dict.items():
-                        print(f"  {key}: {value}")
+                        print(f"  {key}: {value}\n")
 
                     tasks_and_rewards.append(data_dict)
                     print("\n\n")
