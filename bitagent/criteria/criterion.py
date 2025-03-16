@@ -69,7 +69,7 @@ class Criterion():
             reward = -0.5
             max_reward = 1.0
             feedback = bad_message(f"Exception while processing your response, please check format per protocol - {e}")
-            raise e
+            print(e)
         feedback = f"[bold blue]{self.name}[/bold blue]\n" + feedback
         return reward, max_reward, feedback
 
