@@ -173,7 +173,7 @@ while True:
                             outputs[0][len(inputs[0]) :], skip_special_tokens=True
                         )
                     syn.response = output
-                    # print(f"response:\n{output}")
+                    print(f"response:\n{output}")
 
                     # [total_score, total_possible, results, correct_answer]
                     task_reward = tool_call_task.reward(validator=val, synapse=syn)
