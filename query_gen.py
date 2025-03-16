@@ -76,7 +76,6 @@ class MockedValidator(Validator):
 
 
 val = MockedValidator()
-syn = QueryTask()
 
 s3_client = boto3.client("s3")
 
@@ -146,6 +145,8 @@ while True:
                         output = tokenizer.decode(
                             outputs[0][len(inputs[0]) :], skip_special_tokens=True
                         )
+
+                    syn = tool_call_task.synapse
                     syn.response = output
 
                     print(f"response: {output}")
