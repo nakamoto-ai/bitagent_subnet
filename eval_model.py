@@ -123,6 +123,12 @@ for i in range(batch_size):
         # Score response
         syn = tool_call_task.synapse
         syn.response = output
+
+        # mocking like they do in the validator
+        syn.dendrite.process_time = 5.0
+        syn.dendrite.status_code = 200
+        syn.axon.status_code = 200
+
         total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
 
         scores.append(total_score/total_possible)
