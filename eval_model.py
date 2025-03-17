@@ -1,31 +1,70 @@
+from math import exp
 from bitagent.tasks.tool_call_task import ToolCallTask
+from bitagent.schemas.chat import messages_to_list
 from bitagent.datasources import ToolDataset
 from neurons.validator import Validator
+from bitagent.protocol import QueryTask
+from bitagent.criteria import (
+    default_criteria,
+    tool_call_criteria,
+    irrelevant_tool_call_criteria,
+)
+import random
 import json
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import argparse
+import time
+import torch
 import os
-from tqdm import tqdm
 
-parser = argparse.ArgumentParser(description="Evaluate tool call responses")
+
+parser = argparse.ArgumentParser(description="Generate and evaluate tool call tasks")
 parser.add_argument(
-    "--input_file",
+    "--model",
     type=str,
-    required=True,
-    help="Path to the JSON file containing tool call responses to score"
+    default="watt-ai/watt-tool-8B",
+    help="The model name or path to use for generation",
 )
 parser.add_argument(
     "--output_file",
     type=str,
     default="accuracy_results.json",
-    help="Path to output the scoring results"
+    help="Path to save the accuracy results",
+)
+parser.add_argument(
+    "--batch_size",
+    type=int,
+    default=100,
+    help="Number of tasks to evaluate",
 )
 args = parser.parse_args()
 
-input_file = args.input_file
+response_gen_model = args.model
 output_file = args.output_file
+batch_size = args.batch_size
 
-print(f"Loading responses from: {input_file}")
+print(f"Using model: {response_gen_model}")
+print(f"Will evaluate {batch_size} tasks")
 print(f"Results will be saved to: {output_file}")
+
+tokenizer = AutoTokenizer.from_pretrained(response_gen_model, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    response_gen_model, torch_dtype="auto", device_map="auto"
+)
+
+system_prompt = """You are an expert in composing functions.
+You are given a question and a set of possible functions.
+Based on the question, you will need to make one or more function/tool calls to achieve the purpose.
+If none of the functions can be used, RETURN A BLANK RESPONSE.
+If the given question lacks the parameters required by any function,
+You should only return the function call in tools call sections.
+
+If you decide to invoke any of the function(s),
+you MUST put it in the format of [func_name(params_name1=params_value1, params_name2=params_value2...)].
+You SHOULD NOT include any other text in the response.
+Here is a list of functions in JSON format that you can invoke:
+
+{functions}"""
 
 class MockedValidator(Validator):
     def __init__(self):
@@ -34,73 +73,109 @@ class MockedValidator(Validator):
     def validate(self, task):
         return True
 
+
 val = MockedValidator()
 
-# Load responses from input file
-with open(input_file, 'r') as f:
-    responses_data = json.load(f)
-
-results = []
+# Initialize tracking variables
 correct_count = 0
 total_count = 0
+all_results = []
+task_name = "tool_call"
 
-# Process each response
-for item in tqdm(responses_data, desc="Scoring responses"):
+# Process batch of tasks
+for i in range(batch_size):
     try:
+        print(f"Processing task {i+1}/{batch_size}")
+
         # Create a tool call task
         tool_call_task = ToolCallTask(
             validator=val,
             name="Responds with correct function call",
-            offline=True
+            offline=True,
         )
 
-        # Set the task's tools and messages from the loaded data
-        tool_call_task.synapse.tools = [type('Tool', (), t) for t in item["tools_json"]]
+        # Format tools and messages
+        json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
+        json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in tool_call_task.messages]
 
-        # Set the expected tool call
-        tool_call_task.expected_tool_call = item.get("expected_tool_call")
+        # Prepare input for model
+        input = [
+            {
+                "role": "system",
+                "content": system_prompt.format(functions=json_formatted_tools),
+            }
+        ]
+        input.extend(json_formatted_messages)
 
-        # Set the response
+        # Generate response
+        inputs = tokenizer.apply_chat_template(
+            input, return_tensors="pt"
+        ).to(model.device)
+        attention_mask = torch.ones_like(inputs).to(model.device)
+
+        with torch.inference_mode():
+            outputs = model.generate(
+                inputs,
+                max_new_tokens=512,
+                do_sample=False,
+                num_return_sequences=1,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
+                attention_mask=attention_mask,
+            )
+            output = tokenizer.decode(
+                outputs[0][len(inputs[0]):], skip_special_tokens=True
+            )
+
+        # Score response
         syn = tool_call_task.synapse
-        syn.response = item["response"]
+        syn.response = output
+        total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
 
-        # Score the response
-        total_score, total_possible, detailed_results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
-
-        # Determine if the response is correct (perfect score)
+        # Update tracking
         is_correct = total_score == total_possible
         if is_correct:
             correct_count += 1
         total_count += 1
 
-        # Store result
-        result_item = {
-            "response": item["response"],
+        # Store result details
+        result = {
+            "task_id": i,
+            "response": output,
             "expected_tool_call": tool_call_task.expected_tool_call,
             "total_score": total_score,
             "total_possible": total_possible,
             "is_correct": is_correct,
-            "detailed_results": detailed_results
+            "detailed_results": results,
         }
-        results.append(result_item)
+        all_results.append(result)
+
+        # Print current result
+        print(f"Response: {output}")
+        print(f"Expected: {tool_call_task.expected_tool_call}")
+        print(f"Score: {total_score}/{total_possible}")
+        print(f"Correct: {is_correct}")
+        print(f"Current accuracy: {correct_count}/{total_count} = {correct_count/total_count:.2%}\n")
 
     except Exception as e:
-        print(f"Error scoring response: {e}")
+        print(f"Error processing task {i+1}: {e}")
 
-# Calculate overall accuracy
-accuracy = correct_count / total_count if total_count > 0 else 0
-print(f"\nAccuracy: {accuracy:.2%} ({correct_count}/{total_count})")
+# Calculate final accuracy
+final_accuracy = correct_count / total_count if total_count > 0 else 0
 
-# Save results
-output_data = {
-    "accuracy": accuracy,
+# Prepare results summary
+accuracy_results = {
+    "model": response_gen_model,
+    "accuracy": final_accuracy,
     "correct_count": correct_count,
     "total_count": total_count,
-    "detailed_results": results
+    "detailed_results": all_results
 }
 
+# Save results
 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 with open(output_file, "w") as f:
-    json.dump(output_data, f, indent=2)
+    json.dump(accuracy_results, f, indent=2)
 
+print(f"\nFinal accuracy: {final_accuracy:.2%} ({correct_count}/{total_count})")
 print(f"Results saved to {output_file}")
