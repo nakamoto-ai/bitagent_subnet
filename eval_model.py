@@ -160,5 +160,4 @@ os.makedirs(os.path.dirname(output_file), exist_ok=True)
 with open(output_file, "w") as f:
     json.dump(accuracy_results, f, indent=2)
 
-print(f"\nFinal accuracy: {final_accuracy:.2%} ({correct_count}/{total_count})")
 print(f"Results saved to {output_file}")
