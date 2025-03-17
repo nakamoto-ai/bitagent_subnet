@@ -143,6 +143,7 @@ for i in range(batch_size):
         print(f"Response: {output}")
         print(f"Expected: {tool_call_task.expected_tool_call}")
         print(f"Score: {total_score}/{total_possible}")
+        print(f"Current accuracy: {accuracy}")
 
     except Exception as e:
         print(f"Error processing task {i+1}: {e}")
