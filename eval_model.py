@@ -70,11 +70,10 @@ class MockedValidator(Validator):
 
 val = MockedValidator()
 
-# Initialize tracking variables
-correct_count = 0
-total_count = 0
 all_results = []
 task_name = "tool_call"
+scores = []
+accuracy = 0.0
 
 # Process batch of tasks
 for i in range(batch_size):
@@ -126,11 +125,8 @@ for i in range(batch_size):
         syn.response = output
         total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
 
-        # Update tracking
-        is_correct = total_score == total_possible
-        if is_correct:
-            correct_count += 1
-        total_count += 1
+        scores.append(total_score/total_possible)
+        accuracy = sum(scores)/len(scores)
 
         # Store result details
         result = {
@@ -139,7 +135,6 @@ for i in range(batch_size):
             "expected_tool_call": tool_call_task.expected_tool_call,
             "total_score": total_score,
             "total_possible": total_possible,
-            "is_correct": is_correct,
             "detailed_results": results,
         }
         all_results.append(result)
@@ -148,21 +143,14 @@ for i in range(batch_size):
         print(f"Response: {output}")
         print(f"Expected: {tool_call_task.expected_tool_call}")
         print(f"Score: {total_score}/{total_possible}")
-        print(f"Correct: {is_correct}")
-        print(f"Current accuracy: {correct_count}/{total_count} = {correct_count/total_count:.2%}\n")
 
     except Exception as e:
         print(f"Error processing task {i+1}: {e}")
 
-# Calculate final accuracy
-final_accuracy = correct_count / total_count if total_count > 0 else 0
-
 # Prepare results summary
 accuracy_results = {
     "model": response_gen_model,
-    "accuracy": final_accuracy,
-    "correct_count": correct_count,
-    "total_count": total_count,
+    "accuracy": accuracy,
     "detailed_results": all_results
 }
 
