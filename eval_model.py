@@ -26,12 +26,6 @@ parser.add_argument(
     help="The model name or path to use for generation",
 )
 parser.add_argument(
-    "--output_file",
-    type=str,
-    default="accuracy_results.json",
-    help="Path to save the accuracy results",
-)
-parser.add_argument(
     "--batch_size",
     type=int,
     default=100,
@@ -40,7 +34,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 response_gen_model = args.model
-output_file = args.output_file
+output_file = f'eval_results/{response_gen_model.split("/")[-1]}.json'
 batch_size = args.batch_size
 
 print(f"Using model: {response_gen_model}")
