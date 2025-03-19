@@ -122,7 +122,8 @@ for i in range(examples):
 
         # Score response
         syn = tool_call_task.synapse
-        syn.response = output
+        #syn.response = output
+        syn.response = "anything that cannot be parsed to an ast" # testing if it will default to irrelevant and give 3.0/3.0 for score
 
         # mocking like they do in the validator
         syn.dendrite.process_time = 5.0
