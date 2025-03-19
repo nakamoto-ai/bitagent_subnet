@@ -26,7 +26,7 @@ parser.add_argument(
     help="The model name or path to use for generation",
 )
 parser.add_argument(
-    "--len",
+    "--examples",
     type=int,
     default=333, # how many bitagent runs
     help="Number of tasks to evaluate",
@@ -35,10 +35,10 @@ args = parser.parse_args()
 
 response_gen_model = args.model
 output_file = f'eval_results/{response_gen_model.split("/")[-1]}.json'
-len = args.len
+examples = args.examples
 
 print(f"Using model: {response_gen_model}")
-print(f"Will evaluate {len} tasks")
+print(f"Will evaluate {examples} tasks")
 print(f"Results will be saved to: {output_file}")
 
 tokenizer = AutoTokenizer.from_pretrained(response_gen_model, trust_remote_code=True)
@@ -76,9 +76,9 @@ scores = []
 accuracy = 0.0
 
 # Process batch of tasks
-for i in range(len):
+for i in range(examples):
     try:
-        print(f"Processing task {i+1}/{len}")
+        print(f"Processing task {i+1}/{examples}")
 
         # Create a tool call task
         tool_call_task = ToolCallTask(
