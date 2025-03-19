@@ -26,9 +26,9 @@ parser.add_argument(
     help="The model name or path to use for generation",
 )
 parser.add_argument(
-    "--batch_size",
+    "--len",
     type=int,
-    default=100,
+    default=333, # how many bitagent runs
     help="Number of tasks to evaluate",
 )
 args = parser.parse_args()
