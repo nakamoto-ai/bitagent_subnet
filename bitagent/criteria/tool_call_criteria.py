@@ -32,21 +32,21 @@ def correct_tool_call_function_format(task, validator, synapse: bt.Synapse) -> T
         reward = -1.0
         feedback = bad_message(f"Your response was not in the correct format - {e}")
         return reward, max_reward, feedback+received_reward_template.format(reward, max_reward)
-    
+
     feedback = good_message(f"Your response was in the correct format.")
     return reward, max_reward, feedback+received_reward_template.format(reward, max_reward)
 
-# Helper to figure out which arguments are required vs. optional.  
+# Helper to figure out which arguments are required vs. optional.
 def get_required_and_optional_args(task, expected_response: dict) -> Tuple[set[str], set[str]]:
     expected_args = set(expected_response['arguments'].keys())
-    
+
     if "is_ground_truth" in expected_response:
         # For ground truth, treat any argument whose value != [""] as required.
         required_args = {arg for arg in expected_args if expected_response['arguments'][arg] != [""]}
     else:
         # Otherwise, look up the expected tool (assuming task.synapse.tools is a list of tool objects).
         expected_tool = next(tool for tool in task.synapse.tools if tool.name == expected_response['name'])
-        required_args = {arg for arg, arg_info in expected_tool.arguments.items() 
+        required_args = {arg for arg, arg_info in expected_tool.arguments.items()
                          if arg_info.get('required', False)}
 
     optional_args = expected_args - required_args
@@ -85,7 +85,7 @@ def extract_function_name_and_params(response: str):
     function_name = extractor.function_name
 
     param_names = [kw.arg for kw in node.body.keywords]
-    if param_names: 
+    if param_names:
         param_values = [ast.literal_eval(kw.value) for kw in node.body.keywords]
     else:
         param_values = []
@@ -99,7 +99,7 @@ def extract_function_name_and_params(response: str):
 # just checking if the function name is correct
 def correct_tool_call_function_name(task, validator, synapse: bt.Synapse, expected_response: dict) -> Tuple[float, float, str]:
     max_reward = 3.0
-    reward = 3.0    
+    reward = 3.0
 
     function_name, _, _ = extract_function_name_and_params(synapse.response)
     expected_function_name = expected_response['name']
@@ -189,6 +189,12 @@ def correct_tool_argument_values(task, validator, synapse: bt.Synapse, expected_
             return False
 
         prov_str = str(provided_val)
+
+        if isinstance(expected_val, list) and isinstance(provided_val, list):
+            expected_val = sorted(expected_val)
+            provided_val = sorted(provided_val)
+            return expected_val == provided_val
+
         if "is_ground_truth" in expected_response:
             acceptable = [str(v) for v in expected_val] if isinstance(expected_val, list) else [str(expected_val)]
             return prov_str in acceptable
@@ -229,7 +235,7 @@ def correct_tool_argument_values(task, validator, synapse: bt.Synapse, expected_
 def correct_irrelevant_tool_call(task, validator, synapse: bt.Synapse) -> Tuple[float, float, str]:
     max_reward = 3.0
     reward = 3.0
-    
+
     if synapse.response.strip() != "":
         reward = -0.5
         feedback = bad_message(f"Your response (`{synapse.response}`) was not empty, expected an empty response to be returned.")
