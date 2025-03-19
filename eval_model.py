@@ -149,7 +149,9 @@ for i in range(examples):
         print(f"Response: {output}")
         print(f"Expected: {tool_call_task.expected_tool_call}")
         print(f"Score: {total_score}/{total_possible}")
+        print(f"Detailed Results: \n{results}")
         print(f"Current accuracy: {accuracy}")
+        print(f"\n\n")
 
     except Exception as e:
         print(f"Error processing task {i+1}: {e}")
