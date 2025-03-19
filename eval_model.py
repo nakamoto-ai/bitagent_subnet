@@ -35,10 +35,10 @@ args = parser.parse_args()
 
 response_gen_model = args.model
 output_file = f'eval_results/{response_gen_model.split("/")[-1]}.json'
-batch_size = args.batch_size
+len = args.len
 
 print(f"Using model: {response_gen_model}")
-print(f"Will evaluate {batch_size} tasks")
+print(f"Will evaluate {len} tasks")
 print(f"Results will be saved to: {output_file}")
 
 tokenizer = AutoTokenizer.from_pretrained(response_gen_model, trust_remote_code=True)
@@ -76,9 +76,9 @@ scores = []
 accuracy = 0.0
 
 # Process batch of tasks
-for i in range(batch_size):
+for i in range(len):
     try:
-        print(f"Processing task {i+1}/{batch_size}")
+        print(f"Processing task {i+1}/{len}")
 
         # Create a tool call task
         tool_call_task = ToolCallTask(
