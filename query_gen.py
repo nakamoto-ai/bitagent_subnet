@@ -149,6 +149,11 @@ while True:
                     syn = tool_call_task.synapse
                     syn.response = output
 
+                    # to get the score for it (also done in validator code)
+                    syn.dendrite.process_time = 5.0
+                    syn.dendrite.status_code = 200
+                    syn.axon.status_code = 200
+
                     print(f"response: {output}")
 
                     total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
