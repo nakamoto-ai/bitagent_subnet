@@ -195,6 +195,9 @@ def correct_tool_argument_values(task, validator, synapse: bt.Synapse, expected_
             provided_val = sorted(provided_val)
             return expected_val == provided_val
 
+        elif isinstance(expected_val, dict) and isinstance(provided_val, dict):
+            return expected_val == provided_val
+
         if "is_ground_truth" in expected_response:
             acceptable = [str(v) for v in expected_val] if isinstance(expected_val, list) else [str(expected_val)]
             return prov_str in acceptable
