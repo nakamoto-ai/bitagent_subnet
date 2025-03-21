@@ -107,6 +107,7 @@ for task in tasks:
         output = tokenizer.decode(
             outputs[0][len(inputs[0]):], skip_special_tokens=True
         )
+    print(output)
 
     # Score response
     syn = task.synapse
