@@ -90,7 +90,7 @@ for task in tasks:
 
     # Generate response
     inputs = tokenizer.apply_chat_template(
-        input, return_tensors="pt"
+        input, return_tensors="pt", add_generation_prompt=True
     ).to(model.device)
     attention_mask = torch.ones_like(inputs).to(model.device)
 
