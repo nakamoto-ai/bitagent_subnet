@@ -65,39 +65,28 @@ class MockedValidator(Validator):
     def __init__(self):
         self.tool_dataset = ToolDataset()
 
-class MockedToolCallTask(ToolCallTask):
-    def __init__(self, validator):
-        self.validator = validator
 
 dataset = load_dataset('BitAgent/tool_shuffle_small')
 
 raw_df = pd.DataFrame(dataset['train'])
 
+val = MockedValidator()
+num_tasks = 333
+tasks = [ToolCallTask(validator=self, name="Responds with correct function call", offline=True) for _ in range(num_tasks)]
+
 scores = []
-for idx, row in tqdm(raw_df.iterrows(), total=raw_df.shape[0], desc="Processing rows"):
-    conversation = row['conversation']
-    tools = row['tools']
-
-    print(f"tools ({type(tools)}): {tools}")
-    formatted_system_prompt = system_prompt.format(functions=tools)
-
-    print(f"conversation ({type(conversation)}): {conversation}")
-    conversation_list = json.loads(conversation)
-
-    user_query = conversation_list[0]['content']
-    tool_call = conversation_list[1]['content']
+for task in tasks:
+    json_formatted_tools = [tool.__dict__ for tool in task.synapse.tools]
+    json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in task.messages]
 
     # Prepare input for model
     input = [
         {
             "role": "system",
-            "content": formatted_system_prompt
-        },
-        {
-            "role": "user",
-            "content": user_query
+            "content": system_prompt.format(functions=json_formatted_tools),
         }
     ]
+    input.extend(json_formatted_messages)
 
     # Generate response
     inputs = tokenizer.apply_chat_template(
@@ -119,12 +108,8 @@ for idx, row in tqdm(raw_df.iterrows(), total=raw_df.shape[0], desc="Processing 
             outputs[0][len(inputs[0]):], skip_special_tokens=True
         )
 
-
-    val = MockedValidator()
-    tool_call_task = MockedToolCallTask(validator=val)
-
     # Score response
-    syn = tool_call_task.synapse
+    syn = task.synapse
     syn.response = output
 
     # mocking like they do in the validator
@@ -132,9 +117,8 @@ for idx, row in tqdm(raw_df.iterrows(), total=raw_df.shape[0], desc="Processing 
     syn.dendrite.status_code = 200
     syn.axon.status_code = 200
 
-    total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
+    total_score, total_possible, results, correct_answer = task.reward(validator=val, synapse=syn)
 
     scores.append(total_score/total_possible)
     accuracy = sum(scores)/len(scores)
-
-    print(f"accuracy: {accuracy}")
+    print(f"Current accuracy: {accuracy}")
