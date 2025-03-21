@@ -72,7 +72,7 @@ raw_df = pd.DataFrame(dataset['train'])
 
 val = MockedValidator()
 num_tasks = 333
-tasks = [ToolCallTask(validator=self, name="Responds with correct function call", offline=True) for _ in range(num_tasks)]
+tasks = [ToolCallTask(validator=val, name="Responds with correct function call", offline=True) for _ in range(num_tasks)]
 
 scores = []
 for task in tasks:
