@@ -96,10 +96,6 @@ for idx, row in tqdm(raw_df.iterrows(), total=raw_df.shape[0], desc="Processing 
         {
             "role": "user",
             "content": user_query
-        },
-        {
-            "role": "assistant",
-            "content": function_call
         }
     ]
 
