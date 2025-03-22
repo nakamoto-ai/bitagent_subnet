@@ -66,10 +66,6 @@ class MockedValidator(Validator):
         self.tool_dataset = ToolDataset()
 
 
-dataset = load_dataset('BitAgent/tool_shuffle_small')
-
-raw_df = pd.DataFrame(dataset['train'])
-
 val = MockedValidator()
 num_tasks = 333
 tasks = [ToolCallTask(validator=val, name="Responds with correct function call", offline=True) for _ in range(num_tasks)]
