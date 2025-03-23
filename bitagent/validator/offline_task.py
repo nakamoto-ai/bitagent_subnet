@@ -302,7 +302,14 @@ async def offline_task(self, wandb_data):
         info = model_info(hf_model_name.split("@")[0])
         bt.logging.debug(f"OFFLINE: got model info: {info}")
         bt.logging.debug(f"OFFLINE: got model safetensors: {info.safetensors}")
-        total_size = info.safetensors.total
+
+        if info.safetensors:
+            total_size = info.safetensors.total
+            bt.logging.debug(f"OFFLINE: got model total size: {total_size}")
+        else:
+            total_size = 0
+            bt.logging.debug(f"OFFLINE: setting default total size: {total_size}")
+
         bt.logging.debug(f"OFFLINE: got model total size: {total_size}")
         try:
             license = info.card_data["license"]
