@@ -306,6 +306,8 @@ async def offline_task(self, wandb_data):
                 bt.logging.debug("OFFLINE: No license found for model")
                 license = "No license available"
 
+        bt.logging.debug("OFFLINE: verifying license")
+
         # confirm model license is apache-2.0 or nc-by-nc-4.0 or mit
         # TODO eventually ONLY accept apache-2.0
         if license not in ["apache-2.0", "cc-by-nc-4.0", "mit"]:
