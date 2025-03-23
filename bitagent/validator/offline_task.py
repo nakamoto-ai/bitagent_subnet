@@ -274,6 +274,8 @@ async def offline_task(self, wandb_data):
         self.log_event(wandb_data)
         wandb_data.pop("miner_uids")
 
+        print("############## DEBUG #####################")
+
         if (
             hf_model_name is None
             or hf_model_name == ""
@@ -329,6 +331,7 @@ async def offline_task(self, wandb_data):
             wandb_data.pop("miner_uids")
             continue
 
+        print("############## SERVER STEP #####################")
         bt.logging.debug(
             f"OFFLINE: Starting server for model {i + 1} of {len(unique_miner_hf_model_names)}"
         )
@@ -373,7 +376,7 @@ async def offline_task(self, wandb_data):
                 f"""
                 {os.getcwd()}/.venvsglang/bin/python -m sglang.launch_server \
                 --model-path {model_path} \
-                --port {self.config.validator_hf_server_port} \ 
+                --port {self.config.validator_hf_server_port} \
                 --revision {model_commit} \
                 --host 0.0.0.0 \
                 --mem-fraction-static {self.config.validator_hf_server_mem_fraction_static} \
@@ -383,6 +386,7 @@ async def offline_task(self, wandb_data):
                 model_path,
             )
 
+            print("############## END SERVER STEP #####################")
             bt.logging.debug(
                 f"OFFLINE: Started server for model {i + 1} of {len(unique_miner_hf_model_names)}, waiting for it to start on port {self.config.validator_hf_server_port} (could take several minutes)"
             )
