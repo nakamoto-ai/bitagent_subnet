@@ -274,7 +274,7 @@ async def offline_task(self, wandb_data):
         self.log_event(wandb_data)
         wandb_data.pop("miner_uids")
 
-        print("############## DEBUG #####################")
+        bt.logging.debug(f"MODEL NAME: {hf_model_name}")
 
         if (
             hf_model_name is None
@@ -291,6 +291,8 @@ async def offline_task(self, wandb_data):
             self.log_event(wandb_data)
             wandb_data.pop("miner_uids")
             continue  # skip this model
+
+        bt.logging.debug("OFFLINE: passed model name check")
 
         # Extract the model card data for the model from HF
         # ensure logger doesn't print the model name publicly, so restrict to only HF warnings
@@ -318,6 +320,8 @@ async def offline_task(self, wandb_data):
             wandb_data.pop("miner_uids")
             continue
 
+        bt.logging.debug("OFFLINE: passed license check")
+
         # confirm model size is less than 10B params (want 8B or less models)
         if total_size > 10000000000:
             bt.logging.debug(
@@ -331,7 +335,6 @@ async def offline_task(self, wandb_data):
             wandb_data.pop("miner_uids")
             continue
 
-        print("############## SERVER STEP #####################")
         bt.logging.debug(
             f"OFFLINE: Starting server for model {i + 1} of {len(unique_miner_hf_model_names)}"
         )
