@@ -298,10 +298,14 @@ async def offline_task(self, wandb_data):
         # ensure logger doesn't print the model name publicly, so restrict to only HF warnings
         # Temporarily set logging to WARNING within the context manager
         #with temporary_logging_state("Warning"):
+
         info = model_info(hf_model_name.split("@")[0])
+        bt.logging.debug(f"OFFLINE: got model info: {info}")
         total_size = info.safetensors.total
+        bt.logging.debug(f"OFFLINE: got model total size: {total_size}")
         try:
             license = info.card_data["license"]
+            bt.logging.debug(f"OFFLINE: got model license: {license}")
         except Exception:
             bt.logging.debug("OFFLINE: No license found for model")
             license = "No license available"
