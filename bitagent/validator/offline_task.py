@@ -301,6 +301,7 @@ async def offline_task(self, wandb_data):
 
         info = model_info(hf_model_name.split("@")[0])
         bt.logging.debug(f"OFFLINE: got model info: {info}")
+        bt.logging.debug(f"OFFLINE: got model safetensors: {info.safetensors}")
         total_size = info.safetensors.total
         bt.logging.debug(f"OFFLINE: got model total size: {total_size}")
         try:
