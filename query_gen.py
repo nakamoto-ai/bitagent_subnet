@@ -30,28 +30,14 @@ model = AutoModelForCausalLM.from_pretrained(
     response_gen_model, torch_dtype="auto", device_map="auto"
 )
 
-system_prompt = """You are an expert in composing functions.
-You are given a question and a set of possible functions.
-Based on the question, you will need to make one or more function/tool calls to achieve the purpose.
-If none of the functions can be used, RETURN A BLANK RESPONSE.
-If the given question lacks the parameters required by any function,
+system_prompt = """You are an expert in composing functions. You are given a question and a set of possible functions. Based on the question, you will need to make one or more function/tool calls to achieve the purpose.
+If none of the function can be used, point it out. If the given question lacks the parameters required by the function, also point it out.
 You should only return the function call in tools call sections.
 
-If you decide to invoke any of the function(s),
-you MUST put it in the format of [func_name(params_name1=params_value1, params_name2=params_value2...)].
+If you decide to invoke any of the function(s), you MUST put it in the format of [func_name1(params_name1="params_string_value1", params_name2=params_value2...), func_name2(params)]
+Notice that any values that are strings must be put in quotes like this: "params_string_value1"
 You SHOULD NOT include any other text in the response.
-Here is a list of functions in JSON format that you can invoke:
-
-{functions}"""
-"""You are an expert in composing functions. You are given a question and a set of possible functions. Based on the question, you will need to make one or more function/tool calls to achieve the purpose.
-    If none of the function can be used, point it out. If the given question lacks the parameters required by the function, also point it out.
-    You should only return the function call in tools call sections.
-
-    If you decide to invoke any of the function(s), you MUST put it in the format of [func_name1(params_name1="params_string_value1", params_name2=params_value2...), func_name2(params)]
-    Notice that any values that are strings must be put in quotes like this: "params_string_value1"
-    You SHOULD NOT include any other text in the response.
-    Here is a list of functions in JSON format that you can invoke.\n{functions}\n
-    """
+Here is a list of functions in JSON format that you can invoke.\n{functions}\n"""
 
 
 class MockedValidator(Validator):
