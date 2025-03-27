@@ -1,15 +1,6 @@
-from math import exp
 from bitagent.tasks.tool_call_task import ToolCallTask
-from bitagent.schemas.chat import messages_to_list
 from bitagent.datasources import ToolDataset
 from neurons.validator import Validator
-from bitagent.protocol import QueryTask
-from bitagent.criteria import (
-    default_criteria,
-    tool_call_criteria,
-    irrelevant_tool_call_criteria,
-)
-import random
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import argparse
@@ -52,18 +43,15 @@ You SHOULD NOT include any other text in the response.
 Here is a list of functions in JSON format that you can invoke:
 
 {functions}"""
+"""You are an expert in composing functions. You are given a question and a set of possible functions. Based on the question, you will need to make one or more function/tool calls to achieve the purpose.
+    If none of the function can be used, point it out. If the given question lacks the parameters required by the function, also point it out.
+    You should only return the function call in tools call sections.
 
-TASK_FREQUENCY = {
-    "tool_call": 1,
-}
-
-TASK_WEIGHTS = {
-    "tool_call": 0.05,
-}
-
-task_names = list(TASK_FREQUENCY.keys())
-task_frequencies = list(TASK_FREQUENCY.values())
-choice = random.choices(task_names, weights=task_frequencies)[0]
+    If you decide to invoke any of the function(s), you MUST put it in the format of [func_name1(params_name1="params_string_value1", params_name2=params_value2...), func_name2(params)]
+    Notice that any values that are strings must be put in quotes like this: "params_string_value1"
+    You SHOULD NOT include any other text in the response.
+    Here is a list of functions in JSON format that you can invoke.\n{functions}\n
+    """
 
 
 class MockedValidator(Validator):
@@ -91,96 +79,87 @@ def upload_file_to_s3(file_path, bucket_name, object_name=None):
     except Exception as e:
         print(f"Error uploading file: {e}")
 
-
-while True:
+def main():
     tasks = []
     task_datas = []
     task_rewards = []
     tasks_and_rewards = []
 
     batch_size = 500
+
     for i in range(batch_size):
-        try:
-            match choice:
-                case "tool_call":
-                    print(f"Scoring task {i}/{batch_size}")
-                    tool_call_task = ToolCallTask(
-                        validator=val,
-                        name="Responds with correct function call",
-                        offline=True,
-                    )
-                    tasks.append(tool_call_task)
+        print(f"Scoring task {i}/{batch_size}")
+        tool_call_task = ToolCallTask(
+            validator=val,
+            name="Responds with correct function call",
+            offline=True,
+        )
+        tasks.append(tool_call_task)
 
-                    #print(f"Generated messages: {tool_call_task.messages}")
-                    #print(f"Generated tools: {tool_call_task.synapse.tools}")
+        #print(f"Generated messages: {tool_call_task.messages}")
+        #print(f"Generated tools: {tool_call_task.synapse.tools}")
 
-                    json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
-                    json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in tool_call_task.messages]
+        json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
+        json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in tool_call_task.messages]
 
-                    input = [
-                        {
-                            "role": "system",
-                            "content": system_prompt.format(functions=json_formatted_tools),
-                        }
-                    ]
-                    input.extend(json_formatted_messages)
+        input = [
+            {
+                "role": "system",
+                "content": system_prompt.format(functions=json_formatted_tools),
+            }
+        ]
+        input.extend(json_formatted_messages)
 
-                    print(f"Created input: {input}")
+        print(f"Created input: {input}")
 
-                    inputs = tokenizer.apply_chat_template(
-                        input, return_tensors="pt"
-                    ).to(model.device)
-                    attention_mask = torch.ones_like(inputs).to(model.device)
+        inputs = tokenizer.apply_chat_template(
+            input, return_tensors="pt"
+        ).to(model.device)
+        attention_mask = torch.ones_like(inputs).to(model.device)
 
-                    with torch.inference_mode():
-                        outputs = model.generate(
-                            inputs,
-                            max_new_tokens=512,
-                            do_sample=False,
-                            num_return_sequences=1,
-                            eos_token_id=tokenizer.eos_token_id,
-                            pad_token_id=tokenizer.eos_token_id,
-                            attention_mask=attention_mask,
-                        )
-                        output = tokenizer.decode(
-                            outputs[0][len(inputs[0]) :], skip_special_tokens=True
-                        )
+        with torch.inference_mode():
+            outputs = model.generate(
+                inputs,
+                max_new_tokens=512,
+                do_sample=False,
+                num_return_sequences=1,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
+                attention_mask=attention_mask,
+            )
+            output = tokenizer.decode(
+                outputs[0][len(inputs[0]) :], skip_special_tokens=True
+            )
 
-                    syn = tool_call_task.synapse
-                    syn.response = output
+        syn = tool_call_task.synapse
+        syn.response = output
 
-                    # to get the score for it (also done in validator code)
-                    syn.dendrite.process_time = 5.0
-                    syn.dendrite.status_code = 200
-                    syn.axon.status_code = 200
+        # to get the score for it (also done in validator code)
+        syn.dendrite.process_time = 5.0
+        syn.dendrite.status_code = 200
+        syn.axon.status_code = 200
 
-                    print(f"response: {output}")
+        print(f"response: {output}")
 
-                    total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
+        total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
 
-                    data_dict = {
-                        "input": input,
-                        "tools_json": json_formatted_tools,
-                        "messages_json": json_formatted_messages,
-                        "response": output,
-                        "expected_tool_call": tool_call_task.expected_tool_call,
-                        "total_score": total_score,
-                        "total_possible": total_possible,
-                        "results": results,
-                    }
+        data_dict = {
+            "input": input,
+            "tools_json": json_formatted_tools,
+            "messages_json": json_formatted_messages,
+            "response": output,
+            "expected_tool_call": tool_call_task.expected_tool_call,
+            "total_score": total_score,
+            "total_possible": total_possible,
+            "results": results,
+        }
 
-                    print("Row contents:")
-                    for key, value in data_dict.items():
-                        print(f"  {key}: {value}\n")
+        print("Row contents:")
+        for key, value in data_dict.items():
+            print(f"  {key}: {value}\n")
 
-                    tasks_and_rewards.append(data_dict)
-                    print("\n\n")
-
-        except Exception as e:
-            # bt.logging.warning(f'Error getting task (name {choice}): ', e)
-            # bt.logging.warning(traceback.format_exc())
-            raise e
-            print(f"Error getting task (name {choice}): ", e)
+        tasks_and_rewards.append(data_dict)
+        print("\n\n")
 
     # Write tasks_and_rewards to json file
     unix_timestamp = time.time()
@@ -198,3 +177,6 @@ while True:
     upload_file_to_s3(
         output_path, bucket, f"generated/{output_base_name}/{output_filename}"
     )
+
+if __name__ == "__main__": 
+    main()
