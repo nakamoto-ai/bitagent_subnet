@@ -75,78 +75,83 @@ def main():
     batch_size = 500
 
     for i in range(batch_size):
-        print(f"Scoring task {i}/{batch_size}")
-        tool_call_task = ToolCallTask(
-            validator=val,
-            name="Responds with correct function call",
-            offline=True,
-        )
-        tasks.append(tool_call_task)
+        try:
+            print(f"Scoring task {i}/{batch_size}")
 
-        #print(f"Generated messages: {tool_call_task.messages}")
-        #print(f"Generated tools: {tool_call_task.synapse.tools}")
+            tool_call_task = ToolCallTask(
+                validator=val,
+                name="Responds with correct function call",
+                offline=True,
+            )
+            tasks.append(tool_call_task)
 
-        json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
-        json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in tool_call_task.messages]
+            #print(f"Generated messages: {tool_call_task.messages}")
+            #print(f"Generated tools: {tool_call_task.synapse.tools}")
 
-        input = [
-            {
-                "role": "system",
-                "content": system_prompt.format(functions=json_formatted_tools),
+            json_formatted_tools = [tool.__dict__ for tool in tool_call_task.synapse.tools]
+            json_formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in tool_call_task.messages]
+
+            input = [
+                {
+                    "role": "system",
+                    "content": system_prompt.format(functions=json_formatted_tools),
+                }
+            ]
+            input.extend(json_formatted_messages)
+
+            print(f"Created input: {input}")
+
+            inputs = tokenizer.apply_chat_template(
+                input, return_tensors="pt"
+            ).to(model.device)
+            attention_mask = torch.ones_like(inputs).to(model.device)
+
+            with torch.inference_mode():
+                outputs = model.generate(
+                    inputs,
+                    max_new_tokens=512,
+                    do_sample=False,
+                    num_return_sequences=1,
+                    eos_token_id=tokenizer.eos_token_id,
+                    pad_token_id=tokenizer.eos_token_id,
+                    attention_mask=attention_mask,
+                )
+                output = tokenizer.decode(
+                    outputs[0][len(inputs[0]) :], skip_special_tokens=True
+                )
+
+            syn = tool_call_task.synapse
+            syn.response = output
+
+            # to get the score for it (also done in validator code)
+            syn.dendrite.process_time = 5.0
+            syn.dendrite.status_code = 200
+            syn.axon.status_code = 200
+
+            print(f"response: {output}")
+
+            total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
+
+            data_dict = {
+                "input": input,
+                "tools_json": json_formatted_tools,
+                "messages_json": json_formatted_messages,
+                "response": output,
+                "expected_tool_call": tool_call_task.expected_tool_call,
+                "total_score": total_score,
+                "total_possible": total_possible,
+                "results": results,
             }
-        ]
-        input.extend(json_formatted_messages)
 
-        print(f"Created input: {input}")
+            print("Row contents:")
+            for key, value in data_dict.items():
+                print(f"  {key}: {value}\n")
 
-        inputs = tokenizer.apply_chat_template(
-            input, return_tensors="pt"
-        ).to(model.device)
-        attention_mask = torch.ones_like(inputs).to(model.device)
-
-        with torch.inference_mode():
-            outputs = model.generate(
-                inputs,
-                max_new_tokens=512,
-                do_sample=False,
-                num_return_sequences=1,
-                eos_token_id=tokenizer.eos_token_id,
-                pad_token_id=tokenizer.eos_token_id,
-                attention_mask=attention_mask,
-            )
-            output = tokenizer.decode(
-                outputs[0][len(inputs[0]) :], skip_special_tokens=True
-            )
-
-        syn = tool_call_task.synapse
-        syn.response = output
-
-        # to get the score for it (also done in validator code)
-        syn.dendrite.process_time = 5.0
-        syn.dendrite.status_code = 200
-        syn.axon.status_code = 200
-
-        print(f"response: {output}")
-
-        total_score, total_possible, results, correct_answer = tool_call_task.reward(validator=val, synapse=syn)
-
-        data_dict = {
-            "input": input,
-            "tools_json": json_formatted_tools,
-            "messages_json": json_formatted_messages,
-            "response": output,
-            "expected_tool_call": tool_call_task.expected_tool_call,
-            "total_score": total_score,
-            "total_possible": total_possible,
-            "results": results,
-        }
-
-        print("Row contents:")
-        for key, value in data_dict.items():
-            print(f"  {key}: {value}\n")
-
-        tasks_and_rewards.append(data_dict)
-        print("\n\n")
+            tasks_and_rewards.append(data_dict)
+            print("\n\n")
+        except Exception as e:
+            print(e)
+            continue
 
     # Write tasks_and_rewards to json file
     unix_timestamp = time.time()
