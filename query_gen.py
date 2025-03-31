@@ -40,20 +40,8 @@ You SHOULD NOT include any other text in the response.
 Here is a list of functions in JSON format that you can invoke.\n{functions}\n"""
 
 
-class MockedValidator(Validator):
-    def __init__(self):
-        self.tool_dataset = ToolDataset(task_dataset_flag=False)
-        self.task_dataset = ToolDataset(task_dataset_flag=True)
-        self.seed = 572343
-
-    def validate(self, task):
-        return True
-
-
-val = MockedValidator()
 
 s3_client = boto3.client("s3")
-
 
 def upload_file_to_s3(file_path, bucket_name, object_name=None):
     try:
@@ -67,6 +55,19 @@ def upload_file_to_s3(file_path, bucket_name, object_name=None):
         print(f"Error uploading file: {e}")
 
 def main():
+    class MockedValidator(Validator):
+        def __init__(self):
+            self.tool_dataset = ToolDataset(task_dataset_flag=False)
+            self.task_dataset = ToolDataset(task_dataset_flag=True)
+            self.seed = 572343
+
+        def validate(self, task):
+            return True
+
+
+    val = MockedValidator()
+
+
     tasks = []
     task_datas = []
     task_rewards = []
