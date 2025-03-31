@@ -42,7 +42,8 @@ Here is a list of functions in JSON format that you can invoke.\n{functions}\n""
 
 class MockedValidator(Validator):
     def __init__(self):
-        self.task_dataset = ToolDataset()
+        self.tool_dataset = ToolDataset(task_dataset_flag=False)
+        self.task_dataset = ToolDataset(task_dataset_flag=True)
         self.seed = 572343
 
     def validate(self, task):
