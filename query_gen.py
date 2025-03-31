@@ -42,8 +42,8 @@ Here is a list of functions in JSON format that you can invoke.\n{functions}\n""
 
 class MockedValidator(Validator):
     def __init__(self):
-        pass
-        self.tool_dataset = ToolDataset()
+        self.task_dataset = ToolDataset()
+        self.seed = 572343
 
     def validate(self, task):
         return True
@@ -164,6 +164,6 @@ def main():
         output_path, bucket, f"generated/{output_base_name}/{output_filename}"
     )
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     while True:
         main()
