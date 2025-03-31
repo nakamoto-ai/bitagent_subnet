@@ -62,13 +62,14 @@ class BaseValidatorNeuron(BaseNeuron):
         self.offline_model_names = {}
         self.running_offline_mode = False
         self.offline_status = None
-        self.regrade_version = dataset_info("BitAgent/tool_shuffle_small").last_modified.strftime("%Y%m%d")
+        self.regrade_version = dataset_info("BitAgent/tool_shuffle_small").last_modified.strftime("%Y%m%d%H")
         self.update_competition_numbers()
         self.max_div = 0.0006
         self.min_div = 0.00015
         self.state_file_name = "ft_state.npz"
         # set random seed to be encoded regrade version based later
-        np.random.seed(572343)
+        self.seed = self.spec_version*1000000
+        np.random.seed(self.seed)
         bt.logging.info(f"Startup regrade_version: {self.regrade_version}")
 
         # Init sync with the network. Updates the metagraph.
@@ -78,6 +79,7 @@ class BaseValidatorNeuron(BaseNeuron):
             self.sync(save_state=False)
         else:
             # if no state file then we'll create one on init
+            self.hotkeys=[]
             self.sync()
         # Serve axon to enable external connections.
         if not self.config.neuron.axon_off:
@@ -127,11 +129,12 @@ class BaseValidatorNeuron(BaseNeuron):
 
     def tool_dataset_regen(self):
 
-        mod_date = dataset_info("BitAgent/tool_shuffle_small").last_modified.strftime("%Y%m%d")
+        mod_date = dataset_info("BitAgent/tool_shuffle_small").last_modified.strftime("%Y%m%d%H")
         
         if mod_date != self.regrade_version:
             bt.logging.info(f"Dataset Regeneration: Regrade version{self.regrade_version} has changed, updating to {mod_date}")
-            self.tool_dataset = ToolDataset()
+            self.tool_dataset = ToolDataset(task_dataset_flag=False)
+            self.task_dataset = ToolDataset(task_dataset_flag=True)
             self.regrade_version = mod_date
             self.update_competition_numbers()
             bt.logging.debug("Data regenerated.")
@@ -184,7 +187,7 @@ class BaseValidatorNeuron(BaseNeuron):
                     #    self.should_exit = True
                     #    exit()
 
-                if self.step % 200 == 0:
+                if self.step % 500 == 0:
                     self.tool_dataset_regen()
                     
 
@@ -298,7 +301,7 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # always fit scores to weighted curve
         # to change random seed to be encoded regrade version based later
-        np.random.seed(572343)
+        np.random.seed(self.seed)
         weighted_scores = score_spreading(current_odds,self.divisions,self.min_div,self.max_div, kurtosis_factor=0.5, divisions=np.random.randint(2,7))
         bt.logging.debug(f"weighted_scores: {weighted_scores}")
 

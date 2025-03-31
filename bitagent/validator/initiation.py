@@ -65,6 +65,9 @@ def initiate_validator(self):
                 dir=self.config.neuron.full_path,
                 tags=tags,
                 resume='allow',
+                settings=wandb.Settings(
+                    console="off",
+                ),
                 name=f"{uid}-{spec_version}-{datetime.today().strftime('%Y-%m-%d')}",
             )
             bt.logging.success(f"Started a new wandb run <blue> {self.wandb.name} </blue>")
@@ -114,7 +117,8 @@ def clear_wandb_dir(self):
 # provide some capabilities to the task API (LLM, cossim)
 def initiate_validator_local(self):
     #bt.logging.info("Initializing Validator - this may take a while (downloading data and models).")
-    self.tool_dataset = ToolDataset()
+    self.tool_dataset = ToolDataset(task_dataset_flag=False)
+    self.task_dataset = ToolDataset(task_dataset_flag=True)
     self.check_date = ""
     #bt.logging.debug("Initializing Validator - this may take a while (downloading data and models) - loading model ...")
 
