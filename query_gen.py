@@ -59,7 +59,15 @@ def main():
         def __init__(self):
             self.tool_dataset = ToolDataset(task_dataset_flag=False)
             self.task_dataset = ToolDataset(task_dataset_flag=True)
-            self.seed = 572343
+            version = "1.0.8"
+            version_split = version.split(".")
+            spec_version = (
+                (1000 * int(version_split[0]))
+                + (10 * int(version_split[1]))
+                + (1 * int(version_split[2]))
+            )
+            self.spec_version = spec_version
+            self.seed = self.spec_version*1000000
 
         def validate(self, task):
             return True
